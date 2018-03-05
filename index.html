@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>Streetview then and now</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="https://fonts.googleapis.com/css?family=Nunito:700" rel="stylesheet">
+	
+	<style type="text/css">
+		body{
+			padding: 40px;
+			text-align: center;
+
+		}
+		h1{
+			font-family: "Nunito";
+		}
+		img{
+			height: auto;
+			width:50%;
+			margin-right: 20px;
+			margin-bottom: 20px;
+			border:5px solid #000;
+		}
+
+		#images {
+			display:flex;
+			flex-direction: column;
+			align-items: center;
+		}
+	</style>
+		
+
+	
+</head>
+<body>
+
+<h1>Streetview then and now</h1>
+<div id="images"></div>
+
+
+
+
+<script>
+
+	var sparqlquery = `
+		PREFIX hg: <http://rdf.histograph.io/>
+		PREFIX dct: <http://purl.org/dc/terms/>
+		PREFIX sem: <http://semanticweb.cs.vu.nl/2009/11/sem/>
+		PREFIX dc: <http://purl.org/dc/elements/1.1/>
+		PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+		PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+		PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+		PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+		PREFIX void: <http://rdfs.org/ns/void#>
+
+		SELECT ?cho ?date ?street ?img WHERE {
+		 
+		 ?cho dc:type "foto"^^xsd:string .
+		 ?cho foaf:depiction ?img .
+		 ?cho dct:spatial ?s .
+		 ?s a hg:Street .
+		 ?s rdfs:label ?street .
+		 ?cho sem:hasBeginTimeStamp ?date .
+		 ?cho void:inDataset <https://data.adamlink.nl/saa/beeldbank/> .
+		 ?s sem:hasEarliestBeginTimeStamp ?start .
+		 FILTER (year(xsd:dateTime(?start)) > 1920) .
+		 BIND (year(xsd:dateTime(?date)) - year(xsd:dateTime(?start)) AS ?yeardiff) .
+		 FILTER (?yeardiff < 5) .
+		 FILTER (?yeardiff > 0) .
+		}
+		ORDER BY ASC (?cho)
+		LIMIT 50`;
+		//more fun dc:types: 'affiche', 'japonstof', 'tegel', 'herenkostuum'
+		//more fun dc:subjects with Poster.: 'Privacy.', 'Pop music.', 'Music.', 'Squatters movement.'
+
+	var encodedquery = encodeURIComponent(sparqlquery);
+
+	var queryurl = 'https://api.data.adamlink.nl/datasets/AdamNet/all/services/endpoint/sparql?default-graph-uri=&query=' + encodedquery + '&format=application%2Fsparql-results%2Bjson&timeout=0&debug=on';
+
+	fetch(queryurl)
+	.then((resp) => resp.json()) // transform the data into json
+  	.then(function(data) {
+		
+		rows = data.results.bindings; // get the results
+		container = document.getElementById('images');
+		console.log(rows);
+
+		for (i = 0; i < rows.length; ++i) {
+
+			var header = document.createElement('h1');
+			var img = document.createElement('img');
+			var date = document.createElement('span')
+
+			date.innerHTML = rows[i]['date']['value'];
+		    header.innerHTML = rows[i]['street']['value'];
+		    img.src = rows[i]['img']['value'];
+		    img.title = rows[i]['street']['value'];
+		    container.appendChild(header);
+		    container.appendChild(img);
+		    container.appendChild(date);
+
+		}
+	})
+	.catch(function(error) {
+		// if there is any error you will catch them here
+		console.log(error);
+	});
+
+</script>
+
+
+
+</body>
+</html>
